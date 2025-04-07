@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect, useCallback} from "react";
+import { useState } from "react";
 
 const products = [
   {
@@ -78,7 +78,24 @@ export default function Home() {
           CRAFTED FOR ELEGANCE
         </h3>
         
-        <ProductCarousel products={products} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+          {products.map((product) => (
+            <Link href={product.link} key={product.id}>
+              <div className="space-y-4 group cursor-pointer">
+                <div className="aspect-square relative rounded-lg overflow-hidden shadow-lg">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-700"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </div>
+                <h4 className="font-cormorant text-xl font-semibold">{product.name}</h4>
+              </div>
+            </Link>
+          ))}
+        </div>
         
         <div className="flex justify-center mt-12">
           <Link
@@ -100,23 +117,6 @@ export default function Home() {
           <Image
             src="/images/sofa2.jpg"
             alt="Our Craftsmanship"
-            fill
-            className="object-cover hover:scale-105 transition-transform duration-500"
-            sizes="100vw"
-          />
-        </div>
-      </section>
-
-      {/* Collection Section */}
-      <section className="container mx-auto px-6 py-20">
-        <h2 className="text-gray-600 mb-4">Explore Our Collections</h2>
-        <h3 className="font-cormorant text-4xl md:text-5xl font-semibold mb-12">
-          DISCOVER THE PERFECT PIECE
-        </h3>
-        <div className="relative aspect-[16/9] rounded-lg overflow-hidden">
-          <Image
-            src="/images/benchsofa8.jpg"
-            alt="Our Collection"
             fill
             className="object-cover hover:scale-105 transition-transform duration-500"
             sizes="100vw"
@@ -146,144 +146,3 @@ export default function Home() {
     </div>
   );
 }
-
-const ProductCarousel = ({ products }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [touchPosition, setTouchPosition] = useState(null);
-  
-  const getProductsPerSlide = () => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth < 768 ? 1 : 3;
-    }
-    return 3; // Default for SSR
-  };
-  
-  const [productsPerSlide, setProductsPerSlide] = useState(3);
-  
-  useEffect(() => {
-    setProductsPerSlide(getProductsPerSlide());
-    
-    const handleResize = () => {
-      setProductsPerSlide(getProductsPerSlide());
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  const totalSlides = Math.ceil(products.length / productsPerSlide);
-  const maxIndex = Math.max(0, totalSlides - 1);
-
-  const nextSlide = useCallback(() => {
-    setCurrentIndex(current => current >= maxIndex ? 0 : current + 1);
-  }, [maxIndex]);
-
-  const prevSlide = useCallback(() => {
-    setCurrentIndex(current => current <= 0 ? maxIndex : current - 1);
-  }, [maxIndex]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "ArrowLeft") prevSlide();
-      if (e.key === "ArrowRight") nextSlide();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nextSlide, prevSlide]);
-
-  useEffect(() => {
-    if (currentIndex > maxIndex) {
-      setCurrentIndex(0);
-    }
-  }, [productsPerSlide, currentIndex, maxIndex]);
-
-  const handleTouchStart = (e) => {
-    setTouchPosition(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!touchPosition) return;
-    const currentTouch = e.touches[0].clientX;
-    const diff = touchPosition - currentTouch;
-
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        nextSlide();
-      } else {
-        prevSlide();
-      }
-      setTouchPosition(null);
-    }
-  };
-
-  const startIndex = currentIndex * productsPerSlide;
-  const visibleProducts = products.slice(startIndex, Math.min(startIndex + productsPerSlide, products.length));
-
-  const gridCols = productsPerSlide === 1 
-    ? "grid-cols-1" 
-    : productsPerSlide === 2 
-      ? "grid-cols-1 md:grid-cols-2" 
-      : "grid-cols-1 md:grid-cols-3";
-
-  return (
-    <div className="relative max-w-7xl mx-auto">
-      <div 
-        className="relative overflow-hidden" 
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-      >
-        <div className="transition-transform duration-500 ease-out">
-          <div className={`grid ${gridCols} gap-8`}>
-            {visibleProducts.map((product) => (
-              <Link href={product.link} key={product.id}>
-                <div className="space-y-4 group cursor-pointer">
-                  <div className="aspect-square relative rounded-lg overflow-hidden shadow-lg">
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-700"
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
-                  </div>
-                  <h4 className="font-cormorant text-xl font-semibold">{product.name}</h4>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <button
-          onClick={prevSlide}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-colors duration-300 z-10"
-          aria-label="Previous slide"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <button
-          onClick={nextSlide}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white/80 p-3 rounded-full shadow-lg hover:bg-white transition-colors duration-300 z-10"
-          aria-label="Next slide"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-
-      <div className="flex justify-center mt-8 gap-2">
-        {[...Array(totalSlides)].map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentIndex(index)}
-            className={`w-2 h-2 rounded-full transition-colors ${index === currentIndex ? 'bg-[#526D5F]' : 'bg-gray-300'}`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};

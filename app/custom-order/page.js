@@ -7,7 +7,7 @@ export default function CustomOrder() {
     fullName: "",
     email: "",
     phone: "",
-    budget: "25000-50000",
+    budget: "Under ₹5,000",
     category: "Sofa",
     message: "",
   });

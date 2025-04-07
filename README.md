@@ -1,4 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Augusta Luxury Furniture Website
+
+A Next.js static website for a luxury furniture company.
+
+## Features
+
+- Modern responsive design with Tailwind CSS
+- Product showcase with interactive elements
+- Static content for fast loading and simple deployment
+- Mobile-responsive layout
+
+## Development
+
+Start the development server:
+```
+npm run dev
+```
+
+The site will be available at http://localhost:3000
+
+## Production Build
+
+```
+npm run build
+npm start
+```
+
+## Technologies Used
+
+- Next.js 15
+- Tailwind CSS
+- React 19
 
 ## Getting Started
 
