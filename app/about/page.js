@@ -12,13 +12,13 @@ export default function About() {
             <span className="font-cormorant text-5xl md:text-6xl font-semibold tracking-wide md:ml-3">LUXURY</span>
           </h1>
           <p className="text-gray-600 text-lg mb-8">
-            Welcome to Augusta Luxury, where elegance meets excellence. The brand offers high-end, bespoke pieces at unbeatable factory rates. Whether you're a project developer, interior designer, or discerning homeowner, we're dedicated to providing you with exceptional quality, unparalleled style, and outstanding value.
+            Welcome to Augusta Luxury, where elegance meets excellence. The brand offers high-end, bespoke pieces at unbeatable factory rates. Whether you&apos;re a project developer, interior designer, or discerning homeowner, we&apos;re dedicated to providing you with exceptional quality, unparalleled style, and outstanding value.
           </p>
           <p className="text-gray-600 text-lg mb-8">
             Our curated collection includes luxurious furniture, exquisite designer chandeliers, and expert interior design services.
           </p>
           <p className="text-gray-600 text-lg mb-8">
-            At Augusta Luxury, we're passionate about helping you create spaces that inspire, uplift, and reflect your unique taste and sophistication. We are committed to provide Design and Build Services.
+            At Augusta Luxury, we&apos;re passionate about helping you create spaces that inspire, uplift, and reflect your unique taste and sophistication. We are committed to provide Design and Build Services.
           </p>
           <p className="text-gray-600 text-lg mb-8">
             Join us on a journey of luxury, comfort, and refinement. Experience the Augusta Luxury difference.
