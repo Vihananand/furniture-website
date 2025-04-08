@@ -2,31 +2,30 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 
 const products = [
   {
     id: 1,
     name: "Chesterfield Lounger Sofa",
-    image: "/images/sofa1.jpg",
+    image: "/images/s (2).jpg",
     link: "/products/chesterfield-lounger-sofa",
   },
   {
     id: 2,
     name: "Ottoman Bench Sofa",
-    image: "/images/benchsofa1.jpg",
+    image: "/images/bs (2).jpg",
     link: "/products/ottoman-bench-sofa",
   },
   {
     id: 3,
     name: "Carved Sofas",
-    image: "/images/carvedsofa1.jpg",
+    image: "/images/cs (7).jpg",
     link: "/products/carved-sofas",
   },
   {
     id: 4,
     name: "Dining and Lighting",
-    image: "/images/dine3.jpg",
+    image: "/images/d (3).jpg",
     link: "/products/dining-and-lighting",
   },
 ];
@@ -60,7 +59,7 @@ export default function Home() {
           </div>
           <div className="relative aspect-square rounded-full overflow-hidden">
             <Image
-              src="/images/carvedsofa16.jpg"
+              src="/images/cs (17).jpg"
               alt="Premium Luxury Sofa"
               fill
               className="object-cover"
@@ -115,7 +114,7 @@ export default function Home() {
         </h3>
         <div className="relative aspect-[16/9] rounded-lg overflow-hidden">
           <Image
-            src="/images/sofa2.jpg"
+            src="/images/s (3).jpg"
             alt="Our Craftsmanship"
             fill
             className="object-cover hover:scale-105 transition-transform duration-500"
