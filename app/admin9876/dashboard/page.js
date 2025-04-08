@@ -11,6 +11,14 @@ const VALID_CATEGORIES = [
   'Ottoman-Bench-Sofa'
 ];
 
+// Map for category tags
+const CATEGORY_TAGS = {
+  'Carved-Sofas': 'carved-sofas',
+  'Dining-Lighting': 'dining-lighting',
+  'Ottoman-Bench-Sofa': 'ottoman-bench-sofa',
+  'Chesterfield-Lounger-Sofa': 'chesterfield-lounger-sofa'
+};
+
 export default function AdminDashboard() {
   const [categoryName, setCategoryName] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -21,6 +29,8 @@ export default function AdminDashboard() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [categoryImages, setCategoryImages] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,6 +40,55 @@ export default function AdminDashboard() {
       router.push('/admin9876');
     }
   }, [router]);
+
+  useEffect(() => {
+    // Fetch images when category changes
+    if (categoryName) {
+      fetchCategoryImages(CATEGORY_TAGS[categoryName]);
+    } else {
+      setCategoryImages([]);
+    }
+  }, [categoryName]);
+
+  const fetchCategoryImages = async (tag) => {
+    setLoadingImages(true);
+    setCategoryImages([]);
+    try {
+      // Fetch images from Cloudinary with the specified tag
+      const response = await fetch(`/api/cloudinary?tag=${tag}`);
+      if (!response.ok) throw new Error('Failed to fetch images');
+      
+      const data = await response.json();
+      setCategoryImages(data.resources || []);
+    } catch (err) {
+      console.error('Error fetching images:', err);
+      setError('Failed to load category images');
+    } finally {
+      setLoadingImages(false);
+    }
+  };
+
+  const handleDeleteImage = async (publicId) => {
+    try {
+      // Call API to delete image from Cloudinary
+      const response = await fetch('/api/cloudinary', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ publicId }),
+      });
+
+      if (!response.ok) throw new Error('Failed to delete image');
+
+      // Remove deleted image from state
+      setCategoryImages(prev => prev.filter(img => img.public_id !== publicId));
+      setSuccess('Image deleted successfully');
+    } catch (err) {
+      console.error('Error deleting image:', err);
+      setError('Failed to delete image');
+    }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -47,20 +106,6 @@ export default function AdminDashboard() {
       setSelectedFile(file);
       setError('');
     }
-  };
-
-  const uploadToSupabase = async (file, category) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${category}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('products')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    return filePath;
   };
 
   const handleSubmit = async (e) => {
@@ -81,32 +126,28 @@ export default function AdminDashboard() {
         throw new Error('Please select an image file');
       }
 
-      // Upload file to Supabase storage
-      const filePath = await uploadToSupabase(selectedFile, categoryName);
+      // Create FormData for the file upload
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('tags', CATEGORY_TAGS[categoryName]); // Add category tag
 
-      // Get public URL for the uploaded file
-      const { data: { publicUrl } } = supabase.storage
-        .from('products')
-        .getPublicUrl(filePath);
+      // Upload to Cloudinary via API
+      const response = await fetch('/api/cloudinary', {
+        method: 'POST',
+        body: formData,
+      });
 
-      // Add record to your products table (if you have one)
-      const { error: dbError } = await supabase
-        .from('products')
-        .insert([
-          {
-            category: categoryName,
-            image_path: filePath,
-            image_url: publicUrl,
-            created_at: new Date()
-          }
-        ]);
-
-      if (dbError) throw dbError;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Upload failed');
+      }
 
       // Reset form
-      setCategoryName('');
       setSelectedFile(null);
       setSuccess('Product added successfully!');
+      
+      // Refresh the category images
+      fetchCategoryImages(CATEGORY_TAGS[categoryName]);
     } catch (err) {
       setError(err.message || 'An error occurred while submitting the form');
       console.error(err);
@@ -168,7 +209,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 mt-42 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
@@ -243,94 +284,134 @@ export default function AdminDashboard() {
             </form>
           </div>
         ) : (
-          <div className="bg-white shadow rounded-lg p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                  Category
-                </label>
-                <select
-                  id="category"
-                  name="category"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#526D5F] focus:ring-[#526D5F] sm:text-sm px-4 py-2"
-                  value={categoryName}
-                  onChange={(e) => setCategoryName(e.target.value)}
-                >
-                  <option value="">Select a category</option>
-                  {VALID_CATEGORIES.map((category) => (
-                    <option key={category} value={category}>
-                      {category.replace(/-/g, ' ')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Product Image
-                </label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <label
-                        htmlFor="file-upload"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-[#526D5F] hover:text-[#3A4F44] focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-ring-[#526D5F]"
-                      >
-                        <span>Upload a file</span>
-                        <input
-                          id="file-upload"
-                          name="file-upload"
-                          type="file"
-                          accept="image/jpeg,image/png,image/gif"
-                          className="sr-only"
-                          onChange={handleFileChange}
-                        />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                  </div>
+          <>
+            <div className="bg-white shadow rounded-lg p-6 mb-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+                    Category
+                  </label>
+                  <select
+                    id="category"
+                    name="category"
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#526D5F] focus:ring-[#526D5F] sm:text-sm px-4 py-2"
+                    value={categoryName}
+                    onChange={(e) => setCategoryName(e.target.value)}
+                  >
+                    <option value="">Select a category</option>
+                    {VALID_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category.replace(/-/g, ' ')}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                {selectedFile && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Selected file: {selectedFile.name}
-                  </p>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Product Image
+                  </label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex text-sm text-gray-600">
+                        <label
+                          htmlFor="file-upload"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-[#526D5F] hover:text-[#3A4F44] focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-ring-[#526D5F]"
+                        >
+                          <span>Upload a file</span>
+                          <input
+                            id="file-upload"
+                            name="file-upload"
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif"
+                            className="sr-only"
+                            onChange={handleFileChange}
+                          />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                  </div>
+                  {selectedFile && (
+                    <p className="mt-2 text-sm text-gray-500">
+                      Selected file: {selectedFile.name}
+                    </p>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="text-red-500 text-sm text-center">{error}</div>
+                )}
+                {success && (
+                  <div className="text-green-500 text-sm text-center">{success}</div>
+                )}
+
+                <div>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#526D5F] hover:bg-[#3A4F44] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#526D5F]"
+                  >
+                    {isLoading ? 'Uploading...' : 'Upload Product'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Category Images Gallery */}
+            {categoryName && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">{categoryName.replace(/-/g, ' ')} Images</h2>
+                
+                {loadingImages ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#526D5F]"></div>
+                  </div>
+                ) : categoryImages.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {categoryImages.map((image) => (
+                      <div key={image.public_id} className="relative group">
+                        <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200">
+                          <img
+                            src={image.secure_url}
+                            alt={image.public_id}
+                            className="h-48 w-full object-cover object-center"
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleDeleteImage(image.public_id)}
+                          className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Delete image"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No images found in this category</p>
                 )}
               </div>
-
-              {error && (
-                <div className="text-red-500 text-sm text-center">{error}</div>
-              )}
-              {success && (
-                <div className="text-green-500 text-sm text-center">{success}</div>
-              )}
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#526D5F] hover:bg-[#3A4F44] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#526D5F]"
-                >
-                  {isLoading ? 'Uploading...' : 'Upload Product'}
-                </button>
-              </div>
-            </form>
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
