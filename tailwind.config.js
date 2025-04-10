@@ -1,25 +1,19 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
-      fontFamily: {
-        sans: ["var(--font-inter)"],
-        playfair: ["var(--font-playfair)"],
-      },
       colors: {
-        primary: {
-          DEFAULT: "#526D5F",
-          dark: "#3A4F44",
-        },
-        secondary: {
-          DEFAULT: "#C4A484",
-          dark: "#A88B6B",
-        },
+        primary: '#526D5F',
+        secondary: '#3A4F44',
+        accent: '#C4A484',
+      },
+      fontFamily: {
+        cormorant: ['Cormorant', 'serif'],
       },
       container: {
         center: true,
@@ -34,4 +28,4 @@ module.exports = {
     },
   },
   plugins: [],
-}; 
+} 

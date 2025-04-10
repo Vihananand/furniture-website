@@ -60,38 +60,6 @@ const Footer = () => {
           </div>
 
           <div>
-            <h3 className="font-medium text-gray-900 mb-4">Resources</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/faqs" className="text-gray-500 hover:text-gray-900">
-                  FAQs
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-gray-500 hover:text-gray-900">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/warranty"
-                  className="text-gray-500 hover:text-gray-900"
-                >
-                  Warranty
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/returns"
-                  className="text-gray-500 hover:text-gray-900"
-                >
-                  Returns
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
             <h3 className="font-medium text-gray-900 mb-4">Contact Us</h3>
             <ul className="space-y-2">
               <li className="text-gray-500">
@@ -103,26 +71,6 @@ const Footer = () => {
                   className="text-gray-500 hover:text-gray-900"
                 >
                   info@augustaluxury.com
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-gray-900"
-                >
-                  Instagram
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://facebook.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-gray-900"
-                >
-                  Facebook
                 </a>
               </li>
             </ul>
