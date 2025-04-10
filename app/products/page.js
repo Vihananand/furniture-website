@@ -1,12 +1,14 @@
 "use client";
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getImagesByTag, transformToProducts } from '@/utils/cloudinary';
 import { useSearchParams } from 'next/navigation';
 
-export default function Products() {
+// Client component that uses useSearchParams
+function ProductsContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState(categoryParam || 'all');
@@ -208,7 +210,9 @@ export default function Products() {
               className="group relative bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
             >
               <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden">
-                <img
+                <Image
+                  width={1000}
+                  height={1000}
                   src={product.image}
                   alt={product.name}
                   className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
@@ -265,5 +269,18 @@ export default function Products() {
         )}
       </div>
     </div>
+  );
+}
+
+// Main page component with Suspense
+export default function Products() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#526D5F]"></div>
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   );
 } 
