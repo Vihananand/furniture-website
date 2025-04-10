@@ -8,25 +8,25 @@ const products = [
     id: 1,
     name: "Chesterfield Lounger Sofa",
     image: "/images/s (2).jpg",
-    link: "/products/chesterfield-lounger-sofa",
+    link: "/products",
   },
   {
     id: 2,
     name: "Ottoman Bench Sofa",
     image: "/images/bs (2).jpg",
-    link: "/products/ottoman-bench-sofa",
+    link: "/products",
   },
   {
     id: 3,
     name: "Carved Sofas",
     image: "/images/cs (7).jpg",
-    link: "/products/carved-sofas",
+    link: "/products",
   },
   {
     id: 4,
     name: "Dining and Lighting",
     image: "/images/d (3).jpg",
-    link: "/products/dining-and-lighting",
+    link: "/products",
   },
 ];
 

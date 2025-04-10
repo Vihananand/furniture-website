@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/utils/supabase';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -17,25 +16,25 @@ export default function AdminLogin() {
     setError('');
 
     try {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('username', username)
-        .eq('password', password)
-        .single();
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      if (data) {
-        // Store admin session in localStorage
+      if (response.ok) {
         localStorage.setItem('adminAuth', 'true');
         router.push('/admin9876/dashboard');
       } else {
-        setError('Invalid credentials');
+        setError(data.error || 'Invalid credentials');
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError('An error occurred during login');
-      console.error(err);
     } finally {
       setIsLoading(false);
     }

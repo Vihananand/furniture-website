@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/utils/supabase';
 
 const VALID_CATEGORIES = [
   'Carved-Sofas',
@@ -22,7 +21,7 @@ const CATEGORY_TAGS = {
 export default function AdminDashboard() {
   const [categoryName, setCategoryName] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -31,6 +30,9 @@ export default function AdminDashboard() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [categoryImages, setCategoryImages] = useState([]);
   const [loadingImages, setLoadingImages] = useState(false);
+  const [tags, setTags] = useState([]);
+  const [newTagName, setNewTagName] = useState('');
+  const [showTagForm, setShowTagForm] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -38,7 +40,30 @@ export default function AdminDashboard() {
     const isAuthenticated = localStorage.getItem('adminAuth') === 'true';
     if (!isAuthenticated) {
       router.push('/admin9876');
+      return;
     }
+
+    const checkAdminStatus = async () => {
+      try {
+        const response = await fetch('/api/admin/check-auth');
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to check admin status');
+        }
+
+        if (!data.hasAdmin) {
+          setError('No admin data found');
+        }
+      } catch (err) {
+        console.error('Error checking admin status:', err);
+        setError('Failed to check admin status');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAdminStatus();
   }, [router]);
 
   useEffect(() => {
@@ -49,6 +74,82 @@ export default function AdminDashboard() {
       setCategoryImages([]);
     }
   }, [categoryName]);
+
+  useEffect(() => {
+    // Fetch tags on component mount
+    fetchTags();
+  }, []);
+
+  const fetchTags = async () => {
+    try {
+      const response = await fetch('/api/admin/tags');
+      const data = await response.json();
+      if (response.ok) {
+        setTags(data.tags);
+      } else {
+        throw new Error(data.error || 'Failed to fetch tags');
+      }
+    } catch (err) {
+      console.error('Error fetching tags:', err);
+      setError('Failed to load tags');
+    }
+  };
+
+  const handleCreateTag = async (e) => {
+    e.preventDefault();
+    if (!newTagName.trim()) {
+      setError('Tag name cannot be empty');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/tags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: newTagName.trim() }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create tag');
+      }
+
+      setTags([...tags, data.tag]);
+      setNewTagName('');
+      setShowTagForm(false);
+      setSuccess('Tag created successfully!');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteTag = async (tagId) => {
+    if (!window.confirm('Are you sure you want to delete this tag?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/tags', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: tagId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete tag');
+      }
+
+      setTags(tags.filter(tag => tag.id !== tagId));
+      setSuccess('Tag deleted successfully!');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   const fetchCategoryImages = async (tag) => {
     setLoadingImages(true);
@@ -114,9 +215,8 @@ export default function AdminDashboard() {
     setError('');
     setSuccess('');
 
-    // Validate category
-    if (!VALID_CATEGORIES.includes(categoryName)) {
-      setError('Please select a valid category');
+    if (!categoryName) {
+      setError('Please select a category');
       setIsLoading(false);
       return;
     }
@@ -126,12 +226,10 @@ export default function AdminDashboard() {
         throw new Error('Please select an image file');
       }
 
-      // Create FormData for the file upload
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('tags', CATEGORY_TAGS[categoryName]); // Add category tag
+      formData.append('tags', categoryName); // Use the selected tag's slug
 
-      // Upload to Cloudinary via API
       const response = await fetch('/api/cloudinary', {
         method: 'POST',
         body: formData,
@@ -142,12 +240,9 @@ export default function AdminDashboard() {
         throw new Error(errorData.message || 'Upload failed');
       }
 
-      // Reset form
       setSelectedFile(null);
       setSuccess('Product added successfully!');
-      
-      // Refresh the category images
-      fetchCategoryImages(CATEGORY_TAGS[categoryName]);
+      fetchCategoryImages(categoryName);
     } catch (err) {
       setError(err.message || 'An error occurred while submitting the form');
       console.error(err);
@@ -169,26 +264,22 @@ export default function AdminDashboard() {
     }
 
     try {
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('password', currentPassword)
-        .single();
+      const response = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
 
-      if (adminError) throw adminError;
+      const data = await response.json();
 
-      if (!adminData) {
-        setError('Current password is incorrect');
-        setIsLoading(false);
-        return;
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change password');
       }
-
-      const { error: updateError } = await supabase
-        .from('admin_users')
-        .update({ password: newPassword })
-        .eq('id', adminData.id);
-
-      if (updateError) throw updateError;
 
       setSuccess('Password changed successfully!');
       setCurrentPassword('');
@@ -196,7 +287,7 @@ export default function AdminDashboard() {
       setConfirmPassword('');
       setShowPasswordForm(false);
     } catch (err) {
-      setError('An error occurred while changing the password');
+      setError(err.message || 'An error occurred while changing the password');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -209,7 +300,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-52 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
@@ -286,93 +377,155 @@ export default function AdminDashboard() {
         ) : (
           <>
             <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#526D5F] focus:ring-[#526D5F] sm:text-sm px-4 py-2"
-                    value={categoryName}
-                    onChange={(e) => setCategoryName(e.target.value)}
-                  >
-                    <option value="">Select a category</option>
-                    {VALID_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {category.replace(/-/g, ' ')}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Product Image
-                  </label>
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                    <div className="space-y-1 text-center">
-                      <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
-                        stroke="currentColor"
-                        fill="none"
-                        viewBox="0 0 48 48"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <div className="flex text-sm text-gray-600">
-                        <label
-                          htmlFor="file-upload"
-                          className="relative cursor-pointer bg-white rounded-md font-medium text-[#526D5F] hover:text-[#3A4F44] focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-ring-[#526D5F]"
-                        >
-                          <span>Upload a file</span>
-                          <input
-                            id="file-upload"
-                            name="file-upload"
-                            type="file"
-                            accept="image/jpeg,image/png,image/gif"
-                            className="sr-only"
-                            onChange={handleFileChange}
-                          />
-                        </label>
-                        <p className="pl-1">or drag and drop</p>
-                      </div>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                    </div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Tags</h2>
+                <button
+                  onClick={() => setShowTagForm(true)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-[#526D5F] rounded-md hover:bg-[#3A4F44]"
+                >
+                  Create New Tag
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {tags.map((tag) => (
+                  <div key={tag.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                    <span className="text-gray-700">{tag.name}</span>
+                    <button
+                      onClick={() => handleDeleteTag(tag.id)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
                   </div>
-                  {selectedFile && (
-                    <p className="mt-2 text-sm text-gray-500">
-                      Selected file: {selectedFile.name}
-                    </p>
-                  )}
-                </div>
-
-                {error && (
-                  <div className="text-red-500 text-sm text-center">{error}</div>
-                )}
-                {success && (
-                  <div className="text-green-500 text-sm text-center">{success}</div>
-                )}
-
-                <div>
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#526D5F] hover:bg-[#3A4F44] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#526D5F]"
-                  >
-                    {isLoading ? 'Uploading...' : 'Upload Product'}
-                  </button>
-                </div>
-              </form>
+                ))}
+              </div>
             </div>
+
+            {showTagForm ? (
+              <div className="bg-white shadow rounded-lg p-6 mb-6">
+                <h2 className="text-xl font-semibold mb-4">Create New Tag</h2>
+                <form onSubmit={handleCreateTag} className="space-y-4">
+                  <div>
+                    <label htmlFor="tagName" className="block text-sm font-medium text-gray-700">
+                      Tag Name
+                    </label>
+                    <input
+                      type="text"
+                      id="tagName"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#526D5F] focus:ring-[#526D5F] sm:text-sm px-4 py-2"
+                      value={newTagName}
+                      onChange={(e) => setNewTagName(e.target.value)}
+                      placeholder="Enter tag name"
+                    />
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-medium text-white bg-[#526D5F] rounded-md hover:bg-[#3A4F44]"
+                    >
+                      Create Tag
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowTagForm(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <div className="bg-white shadow rounded-lg p-6 mb-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+                      Category
+                    </label>
+                    <select
+                      id="category"
+                      name="category"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#526D5F] focus:ring-[#526D5F] sm:text-sm px-4 py-2"
+                      value={categoryName}
+                      onChange={(e) => setCategoryName(e.target.value)}
+                    >
+                      <option value="">Select a category</option>
+                      {tags.map((tag) => (
+                        <option key={tag.id} value={tag.slug}>
+                          {tag.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Product Image
+                    </label>
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                      <div className="space-y-1 text-center">
+                        <svg
+                          className="mx-auto h-12 w-12 text-gray-400"
+                          stroke="currentColor"
+                          fill="none"
+                          viewBox="0 0 48 48"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <div className="flex text-sm text-gray-600">
+                          <label
+                            htmlFor="file-upload"
+                            className="relative cursor-pointer bg-white rounded-md font-medium text-[#526D5F] hover:text-[#3A4F44] focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-ring-[#526D5F]"
+                          >
+                            <span>Upload a file</span>
+                            <input
+                              id="file-upload"
+                              name="file-upload"
+                              type="file"
+                              accept="image/jpeg,image/png,image/gif"
+                              className="sr-only"
+                              onChange={handleFileChange}
+                            />
+                          </label>
+                          <p className="pl-1">or drag and drop</p>
+                        </div>
+                        <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                      </div>
+                    </div>
+                    {selectedFile && (
+                      <p className="mt-2 text-sm text-gray-500">
+                        Selected file: {selectedFile.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {error && (
+                    <div className="text-red-500 text-sm text-center">{error}</div>
+                  )}
+                  {success && (
+                    <div className="text-green-500 text-sm text-center">{success}</div>
+                  )}
+
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#526D5F] hover:bg-[#3A4F44] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#526D5F]"
+                    >
+                      {isLoading ? 'Uploading...' : 'Upload Product'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             {/* Category Images Gallery */}
             {categoryName && (
