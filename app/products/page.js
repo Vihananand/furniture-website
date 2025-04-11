@@ -7,14 +7,11 @@ import Link from 'next/link';
 import { getImagesByTag, transformToProducts } from '@/utils/cloudinary';
 import { useSearchParams } from 'next/navigation';
 
-// Client component that uses useSearchParams
 function ProductsContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState(categoryParam || 'all');
   const [showFullCategoryView, setShowFullCategoryView] = useState(!!categoryParam);
-  const [isLoading, setIsLoading] = useState(true);
-  const [categoryImages, setCategoryImages] = useState([]);
   const [allProducts, setAllProducts] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -48,7 +45,6 @@ function ProductsContent() {
     async function fetchAllProducts() {
       if (categories.length === 0) return;
       
-      setIsLoading(true);
       try {
         // Fetch products for each category
         const fetchPromises = categories.map(async (category) => {
@@ -70,8 +66,6 @@ function ProductsContent() {
         setAllProducts(products);
       } catch (error) {
         console.error('Failed to fetch products:', error);
-      } finally {
-        setIsLoading(false);
       }
     }
 
@@ -82,17 +76,13 @@ function ProductsContent() {
   useEffect(() => {
     if (showFullCategoryView && selectedCategory !== 'all') {
       const fetchCategoryImages = async () => {
-        setIsLoading(true);
         try {
           const category = categories.find(c => c.slug === selectedCategory);
           if (category) {
             const images = await getImagesByTag(category.slug);
-            setCategoryImages(images);
           }
         } catch (error) {
           console.error('Failed to fetch category images:', error);
-        } finally {
-          setIsLoading(false);
         }
       };
       
@@ -227,12 +217,6 @@ function ProductsContent() {
                   {product.category}
                 </p>
                 <div className="mt-4 flex justify-between items-center">
-                  <button
-                    onClick={() => openImagePreview(product)}
-                    className="text-[#526D5F] hover:text-[#3A4F44] font-medium"
-                  >
-                    View Details
-                  </button>
                   <Link
                     href={`/custom-order?product=${encodeURIComponent(product.name)}&category=${encodeURIComponent(product.category)}&image=${encodeURIComponent(product.image)}`}
                     className="px-4 py-2 bg-[#526D5F] text-white rounded-md hover:bg-[#3A4F44] transition-colors duration-300"

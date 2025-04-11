@@ -63,15 +63,16 @@ const Footer = () => {
             <h3 className="font-medium text-gray-900 mb-4">Contact Us</h3>
             <ul className="space-y-2">
               <li className="text-gray-500">
-                <span className="block">979-707-6363</span>
+                <span className="block">+91 97970 76363</span>
               </li>
               <li>
-                <a
-                  href="mailto:info@augustaluxury.com"
+                <Link
+                  href="mailto:augustaluxuryinfo@gmail.com"
                   className="text-gray-500 hover:text-gray-900"
+                  target="_blank"
                 >
-                  info@augustaluxury.com
-                </a>
+                  augustaluxuryinfo@gmail.com
+                </Link>
               </li>
             </ul>
           </div>
